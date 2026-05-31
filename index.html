@@ -45,21 +45,18 @@
         <button class="btn-pesan" onclick="bukaPilihanPembayaran()">Pesan Sekarang</button>
     </div>
 
-    <div class="overlay" id="overlay" onclick="tutupModal()"></div>
+   <div class="overlay" id="overlay" onclick="tutupModal()"></div>
     <div class="modal-qris" id="modalQRIS">
-        <h3>Pilih Metode Pembayaran</h3>
-        <p>Total: <span id="qrisTotal" style="font-weight: bold; color: red;">Rp 0</span></p>
-        <button onclick="bayar('Bayar di Kasir')" style="background:#6c757d; color:white; padding:12px; border:none; width:100%; margin-bottom:8px; border-radius:8px; font-weight:bold;">💵 Bayar di Kasir (Cash)</button>
-        <button onclick="prosesQRIS()" style="background:#0056b3; color:white; padding:12px; border:none; width:100%; border-radius:8px; font-weight:bold;">📱 Scan QRIS E-Wallet</button>
+        <h3>Pembayaran QRIS</h3>
+        <p>Total yang harus dibayar: <span id="qrisTotal" style="font-weight: bold; color: red; font-size: 1.2rem;">Rp 0</span></p>
         
-        <div id="area-qr" style="display: none; margin-top: 15px;">
-            <hr>
-            <p>Silakan Scan & Bayar:</p>
-            <img id="qrisImage" src="" alt="QRIS" style="width:180px; height:180px;">
-            <button onclick="bayar('QRIS')" style="background:#28a745; color:white; padding:10px; border:none; width:100%; margin-top:10px; border-radius:5px;">Saya Sudah Bayar</button>
+        <div id="area-qr" style="margin-top: 15px;">
+            <p style="font-size: 0.9rem; color: #666;">Silakan Scan & Bayar Menggunakan E-Wallet / M-Banking Anda:</p>
+            <img id="qrisImage" src="" alt="QRIS" style="width:200px; height:200px; border: 1px solid #ddd; padding: 5px; border-radius: 8px;">
+            <button onclick="bayar('QRIS')" style="background:#28a745; color:white; padding:12px; border:none; width:100%; margin-top:15px; border-radius:8px; font-weight: bold; font-size: 1rem; cursor: pointer;">Saya Sudah Bayar</button>
         </div>
     </div>
-
+    
 <script>
     // ⚠️ TENTUKAN URL INTERNET ANDA DI SINI
     const API_URL = "https://script.google.com/macros/s/AKfycbwTMz_f1CVzJdkYrVMjNoJd1XZYztqYQBr5abP_hLENnv8G6k8HGYo02Qy4WP0rhf9O4A/exec";
@@ -112,18 +109,21 @@
     }
 
     function bukaPilihanPembayaran() {
-        const nama = document.getElementById('cust-nama').value;
-        const meja = document.getElementById('cust-meja').value;
-        if(!nama || !meja) return Swal.fire("Oops!", "Mohon isi Nama dan No Meja/WA", "warning");
-        if(keranjang.length === 0) return Swal.fire("Keranjang Kosong", "Pilih menu dulu!", "info");
+    const nama = document.getElementById('cust-nama').value;
+    const meja = document.getElementById('cust-meja').value;
+    if(!nama || !meja) return Swal.fire("Oops!", "Mohon isi Nama dan No Meja/WA terlebih dahulu", "warning");
+    if(keranjang.length === 0) return Swal.fire("Keranjang Kosong", "Pilih menu dulu ya!", "info");
 
-        let total = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
-        document.getElementById('qrisTotal').innerText = "Rp " + total.toLocaleString('id-ID');
-        
-        document.getElementById('modalQRIS').style.display = 'block';
-        document.getElementById('overlay').style.display = 'block';
-        document.getElementById('area-qr').style.display = 'none';
-    }
+    let total = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
+    document.getElementById('qrisTotal').innerText = "Rp " + total.toLocaleString('id-ID');
+    
+    // Langsung generate QRIS otomatis tanpa tombol pilihan lagi
+    document.getElementById('qrisImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PembayaranCeBloom_Total:${total}`;
+    
+    document.getElementById('modalQRIS').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('area-qr').style.display = 'block'; // Langsung tampilkan area QR
+}
 
     function prosesQRIS() {
         let total = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
