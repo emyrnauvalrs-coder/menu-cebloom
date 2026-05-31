@@ -64,15 +64,29 @@
     // ⚠️ TENTUKAN URL INTERNET ANDA DI SINI
     const API_URL = "https://script.google.com/macros/s/AKfycbwTMz_f1CVzJdkYrVMjNoJd1XZYztqYQBr5abP_hLENnv8G6k8HGYo02Qy4WP0rhf9O4A/exec";
 
-    // Data Produk Manual (Sesuaikan gambar jika link foto di sheet belum siap)
-    const produkData = [
-        { id: "P001", nama: "Lily Cup", harga: 1000, foto: "https://images.unsplash.com/photo-1513530534585-c7b1394c6d51?w=400" },
-        { id: "P002", nama: "Tulip Cup", harga: 5000, foto: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400" },
-        { id: "P003", nama: "Matahari Cup", harga: 10000, foto: "https://images.unsplash.com/photo-1517256064527-09c53b2d0c6b?w=400" }
-    ];
+   ```javascript
+   // KODE BARU (OTOMATIS AMBIL DARI GOOGLE SHEETS):
+   let produkData = [];
+   let keranjang = [];
 
-    let keranjang = [];
+   // Fungsi mengambil data dari Google Sheets secara real-time
+   function muatProdukDariSheets() {
+       const grid = document.getElementById('produk-list');
+       grid.innerHTML = "<p style='grid-column: span 2; text-align:center;'>Memuat menu segar... 🌸</p>";
+       
+       fetch(API_URL)
+       .then(response => response.json())
+       .then(data => {
+           produkData = data;
+           renderProduk();
+       })
+       .catch(err => {
+           grid.innerHTML = "<p style='grid-column: span 2; text-align:center; color:red;'>Gagal memuat menu. Coba refresh halaman.</p>";
+       });
+   }
 
+   // Panggil fungsi muat data saat halaman dibuka
+   muatProdukDariSheets();
     function renderProduk() {
         const container = document.getElementById('produk-list');
         container.innerHTML = produkData.map(p => `
