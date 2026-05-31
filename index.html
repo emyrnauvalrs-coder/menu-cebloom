@@ -45,52 +45,53 @@
         <button class="btn-pesan" onclick="bukaPilihanPembayaran()">Pesan Sekarang</button>
     </div>
 
-   <div class="overlay" id="overlay" onclick="tutupModal()"></div>
+    <div class="overlay" id="overlay" onclick="tutupModal()"></div>
     <div class="modal-qris" id="modalQRIS">
         <h3>Pembayaran QRIS</h3>
         <p>Total yang harus dibayar: <span id="qrisTotal" style="font-weight: bold; color: red; font-size: 1.2rem;">Rp 0</span></p>
         
         <div id="area-qr" style="margin-top: 15px;">
             <p style="font-size: 0.9rem; color: #666;">Silakan Scan & Bayar Menggunakan E-Wallet / M-Banking Anda:</p>
-            <img id="qrisImage" src="" alt="QRIS" style="width:200px; height:200px; border: 1px solid #ddd; padding: 5px; border-radius: 8px;">
+            <!-- ⚠️ LINK DI BAWAH INI ADALAH LINK GAMBAR QRIS TEMPLATE. GANTI DENGAN LINK QRIS ASLI TOKO ANDA JIKA SUDAH ADA -->
+            <img id="qrisImage" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=GANTI_DENGAN_QRIS_ASLI" alt="QRIS" style="width:200px; height:200px; border: 1px solid #ddd; padding: 5px; border-radius: 8px;">
             <button onclick="bayar('QRIS')" style="background:#28a745; color:white; padding:12px; border:none; width:100%; margin-top:15px; border-radius:8px; font-weight: bold; font-size: 1rem; cursor: pointer;">Saya Sudah Bayar</button>
         </div>
     </div>
     
 <script>
-    // ⚠️ TENTUKAN URL INTERNET ANDA DI SINI
     const API_URL = "https://script.google.com/macros/s/AKfycbyc6kbP0EJOB1B-jDolduB0FHV5DwNIWBKaNAuPwdtk8dEZ4QoUkKzR_JaJerjp_onwBQ/exec";
 
-   
-   // KODE BARU (OTOMATIS AMBIL DARI GOOGLE SHEETS):
-   let produkData = [];
-   let keranjang = [];
+    let produkData = [];
+    let keranjang = [];
 
-   // Fungsi mengambil data dari Google Sheets secara real-time
-   function muatProdukDariSheets() {
-       const grid = document.getElementById('produk-list');
-       grid.innerHTML = "<p style='grid-column: span 2; text-align:center;'>Memuat menu segar... 🌸</p>";
-       
-       fetch(API_URL)
-       .then(response => response.json())
-       .then(data => {
-           produkData = data;
-           renderProduk();
-       })
-       .catch(err => {
-           grid.innerHTML = "<p style='grid-column: span 2; text-align:center; color:red;'>Gagal memuat menu. Coba refresh halaman.</p>";
-       });
-   }
+    // Fungsi mengambil data dari Google Sheets secara real-time dengan bypass CORS
+    function muatProdukDariSheets() {
+        const grid = document.getElementById('produk-list');
+        grid.innerHTML = "<p style='grid-column: span 2; text-align:center;'>Memuat menu segar... 🌸</p>";
+        
+        fetch(API_URL + "?action=getProduk", { method: "GET" })
+        .then(response => response.json())
+        .then(data => {
+            produkData = data;
+            renderProduk();
+        })
+        .catch(err => {
+            console.error(err);
+            grid.innerHTML = "<p style='grid-column: span 2; text-align:center; color:red;'>Gagal memuat menu. Coba refresh atau cek setelan Sheets Anda.</p>";
+        });
+    }
 
-   // Panggil fungsi muat data saat halaman dibuka
-   muatProdukDariSheets();
     function renderProduk() {
         const container = document.getElementById('produk-list');
+        if (produkData.length === 0) {
+            container.innerHTML = "<p style='grid-column: span 2; text-align:center;'>Tidak ada menu tersedia.</p>";
+            return;
+        }
         container.innerHTML = produkData.map(p => `
             <div class="card">
                 <img src="${p.foto}" alt="${p.nama}">
                 <h4>${p.nama}</h4>
-                <p>Rp ${p.harga.toLocaleString('id-ID')}</p>
+                <p>Rp ${parseInt(p.harga).toLocaleString('id-ID')}</p>
                 <button class="btn-tambah" onclick="tambahKeKeranjang('${p.id}')">Tambah +</button>
             </div>
         `).join('');
@@ -109,26 +110,19 @@
     }
 
     function bukaPilihanPembayaran() {
-    const nama = document.getElementById('cust-nama').value;
-    const meja = document.getElementById('cust-meja').value;
-    if(!nama || !meja) return Swal.fire("Oops!", "Mohon isi Nama dan No Meja/WA terlebih dahulu", "warning");
-    if(keranjang.length === 0) return Swal.fire("Keranjang Kosong", "Pilih menu dulu ya!", "info");
+        const nama = document.getElementById('cust-nama').value;
+        const meja = document.getElementById('cust-meja').value;
+        if(!nama || !meja) return Swal.fire("Oops!", "Mohon isi Nama dan No Meja/WA terlebih dahulu", "warning");
+        if(keranjang.length === 0) return Swal.fire("Keranjang Kosong", "Pilih menu dulu ya!", "info");
 
-    let total = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
-    document.getElementById('qrisTotal').innerText = "Rp " + total.toLocaleString('id-ID');
-    
-    // Langsung generate QRIS otomatis tanpa tombol pilihan lagi
-    document.getElementById('qrisImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PembayaranCeBloom_Total:${total}`;
-    
-    document.getElementById('modalQRIS').style.display = 'block';
-    document.getElementById('overlay').style.display = 'block';
-    document.getElementById('area-qr').style.display = 'block'; // Langsung tampilkan area QR
-}
-
-    function prosesQRIS() {
         let total = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
-        document.getElementById('qrisImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PembayaranCeBloom_Total:${total}`;
-        document.getElementById('area-qr').style.display = 'block';
+        document.getElementById('qrisTotal').innerText = "Rp " + total.toLocaleString('id-ID');
+        
+        // 💡 TIPS: Ganti text di dalam kurung src di bawah dengan LINK GAMBAR QRIS ASLI ANDA jika sudah diupload ke internet
+        document.getElementById('qrisImage').src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://instagram.com/cebloom"; 
+        
+        document.getElementById('modalQRIS').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
     }
 
     function tutupModal() {
@@ -136,57 +130,41 @@
         document.getElementById('overlay').style.display = 'none';
     }
 
-   function bayar(metode) {
-    const nama = document.getElementById('cust-nama').value;
-    const meja = document.getElementById('cust-meja').value;
-    
-    Swal.fire({ title: 'Mengirim Pesanan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-
-    fetch(API_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-            keranjang: keranjang, 
-            metode: metode,
-            nama_pelanggan: nama,  // Mengirim data nama terpisah
-            meja_wa: meja          // Mengirim data meja/wa terpisah
-        })
-    }).then(() => {
-        tutupModal();
-        Swal.fire({
-            title: "Pesanan Sukses!",
-            text: "Pembayaran QRIS diproses. Mohon tunggu sebentar ya!",
-            icon: "success"
-        });
-        keranjang = [];
-        document.getElementById('cust-nama').value = '';
-        document.getElementById('cust-meja').value = '';
-        updateKeranjang();
-    }).catch(err => Swal.fire("Gagal", "Coba lagi", "error"));
-}
-
+    function bayar(metode) {
+        const nama = document.getElementById('cust-nama').value;
+        const meja = document.getElementById('cust-meja').value;
+        
+        Swal.fire({ title: 'Mengirim Pesanan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
         fetch(API_URL, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ keranjang: keranjangModifikasi, metode: metode })
+            body: JSON.stringify({ 
+                keranjang: keranjang, 
+                metode: metode,
+                nama_pelanggan: nama,
+                meja_wa: meja
+            })
         }).then(() => {
             tutupModal();
             Swal.fire({
                 title: "Pesanan Sukses!",
-                text: metode === 'QRIS' ? "Pembayaran diproses. Mohon tunggu." : "Silakan ke kasir untuk bayar cash.",
+                text: "Pembayaran QRIS diproses. Silakan tunjukkan bukti bayar ke stan ya!",
                 icon: "success"
             });
             keranjang = [];
             document.getElementById('cust-nama').value = '';
             document.getElementById('cust-meja').value = '';
             updateKeranjang();
-        }).catch(err => Swal.fire("Gagal", "Coba lagi", "error"));
+        }).catch(err => {
+            console.error(err);
+            Swal.fire("Gagal", "Pesanan gagal terkirim, coba lagi.", "error");
+        });
     }
 
-    renderProduk();
+    // Panggil muat data otomatis saat halaman selesai memproses script
+    muatProdukDariSheets();
 </script>
 </body>
 </html>
