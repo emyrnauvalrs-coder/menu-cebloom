@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu CeBloom - Self Order</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #f8f9fa; color: #333; }
+        .header { background: #007bff; color: white; padding: 20px; text-align: center; font-weight: bold; font-size: 1.2rem; }
+        .container { padding: 15px; max-width: 600px; margin: 0 auto; margin-bottom: 100px; }
+        .customer-info { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .customer-info input { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .produk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .card { background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
+        .card img { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; }
+        .card h4 { margin: 8px 0 4px 0; font-size: 0.95rem; }
+        .card p { margin: 0 0 8px 0; color: #ff5722; font-weight: bold; font-size: 0.9rem; }
+        .btn-tambah { background: #007bff; color: white; border: none; padding: 8px; width: 100%; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; box-shadow: 0 -3px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; border-top-left-radius: 15px; border-top-right-radius: 15px; }
+        .btn-pesan { background: #28a745; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .modal-qris { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; border-radius:15px; box-shadow:0 0 20px rgba(0,0,0,0.3); text-align:center; z-index:100; width: 80%; max-width: 350px; }
+        .overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:99; }
+    </style>
+</head>
+<body>
+
+    <div class="header">🌸 CEBLOOM COFFEE & FLOWERS 🌸</div>
+
+    <div class="container">
+        <div class="customer-info">
+            <label><b>Nama Pemesan:</b></label>
+            <input type="text" id="cust-nama" placeholder="Masukkan nama Anda...">
+            <label><b>Nomor Meja / Nomor WA:</b></label>
+            <input type="text" id="cust-meja" placeholder="Contoh: Meja 03 / 08123xxx">
+        </div>
+        <div class="produk-grid" id="produk-list"></div>
+    </div>
+
+    <div class="cart-bar">
+        <div>
+            <span style="font-size: 0.85rem; color: #666;">Total Pesanan:</span>
+            <div id="total-harga" style="font-size: 1.2rem; font-weight: bold; color: #333;">Rp 0</div>
+        </div>
+        <button class="btn-pesan" onclick="bukaPilihanPembayaran()">Pesan Sekarang</button>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="tutupModal()"></div>
+    <div class="modal-qris" id="modalQRIS">
+        <h3>Pilih Metode Pembayaran</h3>
+        <p>Total: <span id="qrisTotal" style="font-weight: bold; color: red;">Rp 0</span></p>
+        <button onclick="bayar('Bayar di Kasir')" style="background:#6c757d; color:white; padding:12px; border:none; width:100%; margin-bottom:8px; border-radius:8px; font-weight:bold;">💵 Bayar di Kasir (Cash)</button>
+        <button onclick="prosesQRIS()" style="background:#0056b3; color:white; padding:12px; border:none; width:100%; border-radius:8px; font-weight:bold;">📱 Scan QRIS E-Wallet</button>
+        
+        <div id="area-qr" style="display: none; margin-top: 15px;">
+            <hr>
+            <p>Silakan Scan & Bayar:</p>
+            <img id="qrisImage" src="" alt="QRIS" style="width:180px; height:180px;">
+            <button onclick="bayar('QRIS')" style="background:#28a745; color:white; padding:10px; border:none; width:100%; margin-top:10px; border-radius:5px;">Saya Sudah Bayar</button>
+        </div>
+    </div>
+
+<script>
+    // ⚠️ TENTUKAN URL INTERNET ANDA DI SINI
+    const API_URL = "https://script.google.com/macros/s/AKfycbwTMz_f1CVzJdkYrVMjNoJd1XZYztqYQBr5abP_hLENnv8G6k8HGYo02Qy4WP0rhf9O4A/exec";
+
+    // Data Produk Manual (Sesuaikan gambar jika link foto di sheet belum siap)
+    const produkData = [
+        { id: "P001", nama: "Lily Cup", harga: 1000, foto: "https://images.unsplash.com/photo-1513530534585-c7b1394c6d51?w=400" },
+        { id: "P002", nama: "Tulip Cup", harga: 5000, foto: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400" },
+        { id: "P003", nama: "Matahari Cup", harga: 10000, foto: "https://images.unsplash.com/photo-1517256064527-09c53b2d0c6b?w=400" }
+    ];
+
+    let keranjang = [];
+
+    function renderProduk() {
+        const container = document.getElementById('produk-list');
+        container.innerHTML = produkData.map(p => `
+            <div class="card">
+                <img src="${p.foto}" alt="${p.nama}">
+                <h4>${p.nama}</h4>
+                <p>Rp ${p.harga.toLocaleString('id-ID')}</p>
+                <button class="btn-tambah" onclick="tambahKeKeranjang('${p.id}')">Tambah +</button>
+            </div>
+        `).join('');
+    }
+
+    function tambahKeKeranjang(id) {
+        const produk = produkData.find(p => p.id === id);
+        const ada = keranjang.find(item => item.id === id);
+        if (ada) { ada.qty++; } else { keranjang.push({ ...produk, qty: 1 }); }
+        updateKeranjang();
+    }
+
+    function updateKeranjang() {
+        let total = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
+        document.getElementById('total-harga').innerText = "Rp " + total.toLocaleString('id-ID');
+    }
+
+    function bukaPilihanPembayaran() {
+        const nama = document.getElementById('cust-nama').value;
+        const meja = document.getElementById('cust-meja').value;
+        if(!nama || !meja) return Swal.fire("Oops!", "Mohon isi Nama dan No Meja/WA", "warning");
+        if(keranjang.length === 0) return Swal.fire("Keranjang Kosong", "Pilih menu dulu!", "info");
+
+        let total = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
+        document.getElementById('qrisTotal').innerText = "Rp " + total.toLocaleString('id-ID');
+        
+        document.getElementById('modalQRIS').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById('area-qr').style.display = 'none';
+    }
+
+    function prosesQRIS() {
+        let total = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
+        document.getElementById('qrisImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PembayaranCeBloom_Total:${total}`;
+        document.getElementById('area-qr').style.display = 'block';
+    }
+
+    function tutupModal() {
+        document.getElementById('modalQRIS').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+    }
+
+    function bayar(metode) {
+        const nama = document.getElementById('cust-nama').value;
+        const meja = document.getElementById('cust-meja').value;
+        
+        Swal.fire({ title: 'Mengirim Pesanan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+        const keranjangModifikasi = keranjang.map(item => ({
+            id: item.id,
+            nama: `${item.nama} (Cust: ${nama} - ${meja})`, 
+            qty: item.qty,
+            harga: item.harga
+        }));
+
+        fetch(API_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ keranjang: keranjangModifikasi, metode: metode })
+        }).then(() => {
+            tutupModal();
+            Swal.fire({
+                title: "Pesanan Sukses!",
+                text: metode === 'QRIS' ? "Pembayaran diproses. Mohon tunggu." : "Silakan ke kasir untuk bayar cash.",
+                icon: "success"
+            });
+            keranjang = [];
+            document.getElementById('cust-nama').value = '';
+            document.getElementById('cust-meja').value = '';
+            updateKeranjang();
+        }).catch(err => Swal.fire("Gagal", "Coba lagi", "error"));
+    }
+
+    renderProduk();
+</script>
+</body>
+</html>
