@@ -136,18 +136,36 @@
         document.getElementById('overlay').style.display = 'none';
     }
 
-    function bayar(metode) {
-        const nama = document.getElementById('cust-nama').value;
-        const meja = document.getElementById('cust-meja').value;
-        
-        Swal.fire({ title: 'Mengirim Pesanan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+   function bayar(metode) {
+    const nama = document.getElementById('cust-nama').value;
+    const meja = document.getElementById('cust-meja').value;
+    
+    Swal.fire({ title: 'Mengirim Pesanan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
-        const keranjangModifikasi = keranjang.map(item => ({
-            id: item.id,
-            nama: `${item.nama} (Cust: ${nama} - ${meja})`, 
-            qty: item.qty,
-            harga: item.harga
-        }));
+    fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+            keranjang: keranjang, 
+            metode: metode,
+            nama_pelanggan: nama,  // Mengirim data nama terpisah
+            meja_wa: meja          // Mengirim data meja/wa terpisah
+        })
+    }).then(() => {
+        tutupModal();
+        Swal.fire({
+            title: "Pesanan Sukses!",
+            text: "Pembayaran QRIS diproses. Mohon tunggu sebentar ya!",
+            icon: "success"
+        });
+        keranjang = [];
+        document.getElementById('cust-nama').value = '';
+        document.getElementById('cust-meja').value = '';
+        updateKeranjang();
+    }).catch(err => Swal.fire("Gagal", "Coba lagi", "error"));
+}
+
 
         fetch(API_URL, {
             method: "POST",
